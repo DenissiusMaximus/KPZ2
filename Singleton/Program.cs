@@ -1,12 +1,12 @@
-﻿class Singleton
+﻿class Authenticator
 {
-    private Singleton() { }
+    private Authenticator() { }
 
-    private static Singleton _instance;
+    private static Authenticator _instance;
 
     private static readonly object _lock = new object();
 
-    public static Singleton GetInstance()
+    public static Authenticator GetInstance()
     {
         if (_instance == null)
         {
@@ -14,12 +14,26 @@
             {
                 if (_instance == null)
                 {
-                    _instance = new Singleton();
+                    _instance = new Authenticator();
                 }
             }
         }
         return _instance;
     }
 
-    public string Value { get; set; }
+    public string User { get; set; }
+}
+
+class Program
+{
+    static void Main()
+    {
+        var firstAuthenticator = Authenticator.GetInstance();
+        firstAuthenticator.User = "admin";
+
+        var secondAuthenticator = Authenticator.GetInstance();
+
+        Console.WriteLine($"Same instance: {ReferenceEquals(firstAuthenticator, secondAuthenticator)}");
+        Console.WriteLine($"User from second reference: {secondAuthenticator.User}");
+    }
 }
