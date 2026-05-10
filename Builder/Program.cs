@@ -1,14 +1,14 @@
 ﻿public class Character
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     public int Age { get; set; }
-    public string Color { get; set; }
-    public string Type { get; set; }
+    public string Color { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
     public double Height { get; set; }
-    public string Build { get; set; }
-    public string HairColor { get; set; }
-    public string EyeColor { get; set; }
-    public string Outfit { get; set; }
+    public string Build { get; set; } = string.Empty;
+    public string HairColor { get; set; } = string.Empty;
+    public string EyeColor { get; set; } = string.Empty;
+    public string Outfit { get; set; } = string.Empty;
     public List<string> Inventory { get; set; } = new List<string>();
     public List<string> Deeds { get; set; } = new List<string>();
 

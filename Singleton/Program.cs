@@ -2,7 +2,7 @@
 {
     private Authenticator() { }
 
-    private static Authenticator _instance;
+    private static Authenticator? _instance;
 
     private static readonly object _lock = new object();
 
@@ -21,7 +21,7 @@
         return _instance;
     }
 
-    public string User { get; set; }
+    public string User { get; set; } = string.Empty;
 }
 
 class Program

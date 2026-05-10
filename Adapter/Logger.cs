@@ -2,16 +2,25 @@
 {
     public void Log(string message)
     {
-        Console.WriteLine($"Log: {message}", ConsoleColor.Green);
+        var prev = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"Log: {message}");
+        Console.ForegroundColor = prev;
     }
     
     public void Error(string message)
     {
-        Console.WriteLine($"Error: {message}", ConsoleColor.Red);
+        var prev = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Error: {message}");
+        Console.ForegroundColor = prev;
     }
     
     public void Warn(string message)
     {
-        Console.WriteLine($"Warn: {message}", ConsoleColor.Yellow);
+        var prev = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"Warn: {message}");
+        Console.ForegroundColor = prev;
     }
 }

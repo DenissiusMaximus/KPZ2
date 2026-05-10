@@ -1,4 +1,6 @@
-﻿public class Spear(IHero hero) : InventoryDecorator(hero)
+﻿public class Spear : InventoryDecorator
 {
-    public override string GetName() => hero.GetName() + " Spear";
+    public Spear(IHero hero) : base(hero) { }
+
+    public override string GetName() => _hero.GetName() + " Spear";
 }
