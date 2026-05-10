@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 
-public class SmartTextReader
+public class SmartTextReader : ISmartTextReader
 {
     public char[][] Read(string path)
     {

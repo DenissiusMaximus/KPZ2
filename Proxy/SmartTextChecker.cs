@@ -1,10 +1,10 @@
 using System;
 
-public class SmartTextChecker
+public class SmartTextChecker : ISmartTextReader
 {
-    private readonly SmartTextReader _reader;
+    private readonly ISmartTextReader _reader;
 
-    public SmartTextChecker(SmartTextReader reader)
+    public SmartTextChecker(ISmartTextReader reader)
     {
         _reader = reader;
     }

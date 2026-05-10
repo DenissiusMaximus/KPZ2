@@ -2,12 +2,12 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 
-public class SmartTextReaderLocker
+public class SmartTextReaderLocker : ISmartTextReader
 {
-    private readonly SmartTextReader _reader;
+    private readonly ISmartTextReader _reader;
     private readonly Regex _denyPattern;
 
-    public SmartTextReaderLocker(SmartTextReader reader, string denyRegex)
+    public SmartTextReaderLocker(ISmartTextReader reader, string denyRegex)
     {
         _reader = reader;
         _denyPattern = new Regex(denyRegex, RegexOptions.Compiled);

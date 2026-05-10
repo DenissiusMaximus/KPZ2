@@ -12,9 +12,9 @@ File.WriteAllLines(tmp, new[] {
 
 Console.WriteLine($"Sample file created: {tmp}");
 
-var reader = new SmartTextReader();
-var checker = new SmartTextChecker(reader);
-var locker = new SmartTextReaderLocker(reader, "^lab3_.*\\.txt$"); // deny files starting with lab3_
+ISmartTextReader reader = new SmartTextReader();
+ISmartTextReader checker = new SmartTextChecker(reader);
+ISmartTextReader locker = new SmartTextReaderLocker(reader, "^lab3_.*\\.txt$"); // deny files starting with lab3_
 
 Console.WriteLine("--- Using SmartTextChecker (logging) ---");
 checker.Read(tmp);

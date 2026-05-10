@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
-// Demo: build LightHTML tree from text and measure memory usage
 var lines = new[] {
     "My Book Title",
     "Short",
@@ -39,7 +38,6 @@ Console.WriteLine($"Regular tree memory delta: {after - before} bytes");
 Console.WriteLine("Sample outerHTML of first child:");
 Console.WriteLine(root.Children[0].OuterHTML());
 
-// Now build using flyweight
 Console.WriteLine("\nBuilding flyweight-backed tree...");
 GC.Collect();
 before = GC.GetTotalMemory(true);
@@ -70,7 +68,6 @@ Console.WriteLine($"Flyweight tree memory delta: {after - before} bytes");
 Console.WriteLine("Sample outerHTML of first child (flyweight):");
 Console.WriteLine(root2.Children[0].OuterHTML());
 
-// Observer demo: add event listener to first heading
 Console.WriteLine("\nObserver demo: adding click listener to first h1");
 if (root2.Children.Count > 0 && root2.Children[0] is LightElementNode first)
 {

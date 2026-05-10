@@ -7,20 +7,16 @@ public enum ClosingType { Single, Closed }
 
 public class LightElementNode : LightNode
 {
-    // Optional local metadata (when not using flyweight)
     private readonly string? _tagName;
     private readonly DisplayType? _display;
     private readonly ClosingType? _closing;
     private readonly List<string>? _classes;
 
-    // Optional flyweight
     private readonly ElementFlyweight? _fly;
 
     public List<LightNode> Children { get; } = new();
-    // Event listeners: event name -> list of handlers
     private readonly Dictionary<string, List<Action<LightElementNode, string>>> _listeners = new();
 
-    // Constructor without flyweight
     public LightElementNode(string tagName, DisplayType display, ClosingType closing, IEnumerable<string> classes = null)
     {
         _tagName = tagName;
@@ -29,7 +25,6 @@ public class LightElementNode : LightNode
         _classes = classes != null ? new List<string>(classes) : new List<string>();
     }
 
-    // Constructor with flyweight
     public LightElementNode(ElementFlyweight fly)
     {
         _fly = fly ?? throw new ArgumentNullException(nameof(fly));
