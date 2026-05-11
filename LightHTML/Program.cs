@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-
 var lines = new[] {
     "My Book Title",
     "Short",

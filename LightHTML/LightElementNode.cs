@@ -15,6 +15,7 @@ public class LightElementNode : LightNode
     private readonly ElementFlyweight? _fly;
 
     public List<LightNode> Children { get; } = new();
+    
     private readonly Dictionary<string, List<Action<LightElementNode, string>>> _listeners = new();
 
     public LightElementNode(string tagName, DisplayType display, ClosingType closing, IEnumerable<string> classes = null)
@@ -33,7 +34,7 @@ public class LightElementNode : LightNode
     private string TagName => _fly?.TagName ?? _tagName ?? string.Empty;
     private DisplayType Display => _fly?.Display ?? _display.GetValueOrDefault();
     private ClosingType Closing => _fly?.Closing ?? _closing.GetValueOrDefault();
-    private IEnumerable<string> Classes => _fly?.Classes ?? (IEnumerable<string>? )_classes ?? Enumerable.Empty<string>();
+    private IEnumerable<string> Classes => _fly?.Classes ?? (IEnumerable<string>?)_classes ?? Enumerable.Empty<string>();
 
     public override string InnerHTML() => string.Concat(Children.Select(c => c.OuterHTML()));
 
