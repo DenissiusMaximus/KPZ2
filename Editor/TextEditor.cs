@@ -30,7 +30,6 @@ public class TextEditor
             return;
         }
 
-        // pop current state
         _history.Pop();
         var m = _history.Peek();
         _doc.Restore(m);
