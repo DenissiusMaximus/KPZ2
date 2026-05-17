@@ -1,59 +1,5 @@
 using LightHTML.Core;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-static LightElementNode ClassifyLine(string line, int index, FlyweightFactory factory, bool useFlyweight)
-{
-    ElementFlyweight Fw(string tag) =>
-        factory.Get(tag, DisplayType.Block, ClosingType.Closed);
-
-    if (useFlyweight)
-    {
-        var fw = index == 0                            ? Fw("h1")
-               : line.StartsWith(' ') || line.StartsWith('\t') ? Fw("blockquote")
-               : line.Length < 20                     ? Fw("h2")
-               :                                        Fw("p");
-        return new LightElementNode(fw);
-    }
-    else
-    {
-        var tag = index == 0                            ? "h1"
-                : line.StartsWith(' ') || line.StartsWith('\t') ? "blockquote"
-                : line.Length < 20                     ? "h2"
-                :                                        "p";
-        return new LightElementNode(tag);
-    }
-}
-
-static LightElementNode BuildTree(IReadOnlyList<string> lines, FlyweightFactory factory, bool useFlyweight)
-{
-    var root = useFlyweight
-        ? new LightElementNode(factory.Get("div"))
-        : new LightElementNode("div");
-
-    for (int i = 0; i < lines.Count; i++)
-    {
-        var line = lines[i];
-        ClassifyLine(line, i, factory, useFlyweight)
-            .AppendText(line.Trim())
-            .WithAttribute("data-index", i.ToString())
-            .Pipe(el => root.Append(el));
-    }
-
-    return root;
-}
-
-static long MeasureDelta(Action action)
-{
-    GC.Collect();
-    var before = GC.GetTotalMemory(true);
-    action();
-    GC.Collect();
-    return GC.GetTotalMemory(true) - before;
-}
-
-// ── Data ──────────────────────────────────────────────────────────────────────
-
 var lines = new[]
 {
     "My Book Title",
@@ -64,83 +10,116 @@ var lines = new[]
 
 var factory = new FlyweightFactory();
 
-// ── 1. Memory comparison ──────────────────────────────────────────────────────
-
-Console.WriteLine("═══ Memory Comparison ═══════════════════════════════════");
-
-LightElementNode? regularRoot = null;
-var regularDelta = MeasureDelta(() => regularRoot = BuildTree(lines, factory, useFlyweight: false));
-Console.WriteLine($"  Regular   tree Δ: {regularDelta,6} bytes");
-
-LightElementNode? flyRoot = null;
-var flyDelta = MeasureDelta(() => flyRoot = BuildTree(lines, factory, useFlyweight: true));
-Console.WriteLine($"  Flyweight tree Δ: {flyDelta,6} bytes");
-Console.WriteLine($"  Flyweight cache size: {factory.CacheSize} entries");
-
-// ── 2. HTML output ────────────────────────────────────────────────────────────
-
-Console.WriteLine("\n═══ HTML Output (flyweight tree) ════════════════════════");
-Console.WriteLine(flyRoot!.OuterHTML());
-
-// ── 3. Observer: event listeners ─────────────────────────────────────────────
-
-Console.WriteLine("\n═══ Observer: Event System ══════════════════════════════");
-if (flyRoot.Children.FirstOrDefault() is LightElementNode first)
+LightElementNode BuildTree(bool useFlyweight)
 {
-    EventListener onClick = (sender, payload) =>
-        Console.WriteLine($"  click on <{sender.TagName()}> | payload: '{payload}'");
+    var root = useFlyweight
+        ? new LightElementNode(factory.Get("div"))
+        : new LightElementNode("div");
 
-    first.AddEventListener("click", onClick);
-    first.DispatchEvent("click", "user-click");
-    first.RemoveEventListener("click", onClick);
-    first.DispatchEvent("click", "after-remove");   // silence expected
-    Console.WriteLine("  (no output after removal — correct)");
+    for (int i = 0; i < lines.Length; i++) 
+    {
+        var line = lines[i];
+        var tag  = i == 0                                        ? "h1"
+                 : line.StartsWith(' ') || line.StartsWith('\t') ? "blockquote"
+                 : line.Length < 20                              ? "h2"
+                 :                                                 "p";
+
+        var el = useFlyweight
+            ? new LightElementNode(factory.Get(tag)) : new LightElementNode(tag);
+
+        el.AppendText(line.Trim()).WithAttribute("data-index", i.ToString());
+        root.Append(el);
+    }
+    return root;
 }
 
-// ── 4. Fluent builder + Style/Attr ────────────────────────────────────────────
-
-Console.WriteLine("\n═══ Fluent Builder ══════════════════════════════════════");
-var card = new LightElementNode("div", classes: ["card", "highlight"])
-    .WithStyle("color", "#fff")
-    .WithStyle("background", "#333")
-    .WithAttribute("id", "main-card")
-    .AppendText("Hello, LightHTML!")
-    .Append(new LightImageNode("logo.png", new FileImageLoader()) { Alt = "Logo" });
-
-Console.WriteLine(card.OuterHTML());
-
-// ── 5. Strategy: image loading ────────────────────────────────────────────────
-
-Console.WriteLine("\n═══ Strategy: Image Loading ══════════════════════════════");
-var cachedNet = new CachedImageLoader(new NetworkImageLoader());
-
-var img1 = new LightImageNode("C:\\images\\cover.jpg",   new FileImageLoader());
-var img2 = new LightImageNode("http://example.com/a.png", cachedNet);
-var img3 = new LightImageNode("http://example.com/a.png", cachedNet); // cache hit
-
-foreach (var img in new[] { img1, img2, img3 })
+long MemDelta(Action action)
 {
-    Console.Write($"  {img.OuterHTML()} → ");
-    img.Load();
+    GC.Collect();
+    var b = GC.GetTotalMemory(true);
+    action();
+    GC.Collect();
+    return GC.GetTotalMemory(true) - b;
 }
 
-// ── 6. Visitor ────────────────────────────────────────────────────────────────
+static string NodeLabel(LightNode n) => n switch
+{
+    LightElementNode el => "<" + el.OuterHTML().TrimStart('<').Split([' ', '>'])[0] + ">",
+    LightTextNode txt   => $"text({txt.Text[..Math.Min(6, txt.Text.Length)]}…)",
+    _                   => n.GetType().Name
+};
 
-Console.WriteLine("\n═══ Visitor: Node Count ══════════════════════════════════");
+// === Flyweight ===
+Console.WriteLine("=== Flyweight ===");
+LightElementNode? regular = null, fly = null;
+Console.WriteLine($"  Regular   delta: {MemDelta(() => regular = BuildTree(false)),6} bytes");
+Console.WriteLine($"  Flyweight delta: {MemDelta(() => fly     = BuildTree(true)),6} bytes  (cache: {factory.CacheSize})");
+
+// === Visitor ===
+Console.WriteLine("\n=== Visitor ===");
 var counter = new NodeCountVisitor();
-flyRoot.Accept(counter);
-Console.WriteLine($"  Elements: {counter.Elements}, Texts: {counter.Texts}, Images: {counter.Images}, Total: {counter.Total}");
+fly!.Accept(counter);
+Console.WriteLine($"  Elements={counter.Elements}, Texts={counter.Texts}, Total={counter.Total}");
 
-// ── Extension helpers (local) ─────────────────────────────────────────────────
+var printer = new PrettyPrintVisitor();
+fly.Accept(printer);
+Console.Write(printer);
 
-static class LightElementNodeExtensions
+// === Iterator ===
+Console.WriteLine("=== Iterator ===");
+Console.WriteLine("  DFS: " + string.Join(", ", fly.Select(NodeLabel)));
+Console.WriteLine("  BFS: " + string.Join(", ", fly.BreadthFirst().Select(NodeLabel)));
+
+// === Command ===
+Console.WriteLine("\n=== Command (undo/redo) ===");
+var history = new DomHistory();
+var div  = new LightElementNode("div");
+var span = new LightElementNode("span").AppendText("hello");
+
+history.Execute(new AppendChildCommand(div, span));
+Console.WriteLine($"  append:   {div.OuterHTML()}");
+
+history.Execute(new SetAttributeCommand(span, "id", "greeting"));
+Console.WriteLine($"  set-id:   {div.OuterHTML()}");
+
+history.Undo();
+Console.WriteLine($"  undo:     {div.OuterHTML()}");
+
+history.Undo();
+Console.WriteLine($"  undo x2:  {div.OuterHTML()}");
+
+history.Redo();
+Console.WriteLine($"  redo:     {div.OuterHTML()}");
+
+// === State ===
+Console.WriteLine("\n=== State ===");
+var btn = new LightElementNode("button", classes: ["btn"]);
+Console.WriteLine($"  Normal:   {btn.OuterHTML()}");
+
+btn.State = btn.State.OnFocus();
+Console.WriteLine($"  Focused:  {btn.OuterHTML()}");
+
+btn.State = btn.State.OnDisable();
+Console.WriteLine($"  Disabled: {btn.OuterHTML()}");
+
+btn.State = btn.State.OnEnable();
+Console.WriteLine($"  Enabled:  {btn.OuterHTML()}");
+
+// === Template Method ===
+Console.WriteLine("\n=== Template Method (Lifecycle) ===");
+var logged = new LoggedElement("p");
+logged.AppendText("lifecycle test");
+_ = logged.OuterHTML();
+logged.OnInserted();
+logged.OnRemoved();
+
+sealed class LoggedElement : LifecycleElementNode
 {
-    // Reflect TagName without exposing it publicly on the node
-    public static string TagName(this LightElementNode el) =>
-        el.OuterHTML().TrimStart('<').Split([ ' ', '>' ])[0];
-}
+    public LoggedElement(string tag) : base(tag) { }
 
-static class PipeExtensions
-{
-    public static T Pipe<T>(this T value, Action<T> action) { action(value); return value; }
+    protected override void OnCreated()                => Console.WriteLine("  [hook] OnCreated");
+    protected override void OnBeforeRender()           => Console.WriteLine("  [hook] OnBeforeRender");
+    protected override void OnAfterRender(string html) => Console.WriteLine($"  [hook] OnAfterRender -> {html}");
+    public    override void OnInserted()               => Console.WriteLine("  [hook] OnInserted");
+    public    override void OnRemoved()                => Console.WriteLine("  [hook] OnRemoved");
 }
