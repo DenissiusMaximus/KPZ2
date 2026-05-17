@@ -1,6 +1,6 @@
 using LightHTML.Core;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers 
 
 static LightElementNode ClassifyLine(string line, int index, FlyweightFactory factory, bool useFlyweight)
 {
