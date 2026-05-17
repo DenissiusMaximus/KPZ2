@@ -2,7 +2,6 @@ using System.Text;
 
 namespace LightHTML.Core;
 
-// Visitor: pretty-print the DOM tree with indentation
 public sealed class PrettyPrintVisitor : INodeVisitor
 {
     private readonly StringBuilder _sb = new();
@@ -12,7 +11,8 @@ public sealed class PrettyPrintVisitor : INodeVisitor
 
     public void Visit(LightElementNode element)
     {
-        _sb.AppendLine($"{Indent}<{element.OuterHTML()[..Math.Min(60, element.OuterHTML().Length)]}...");
+        var tag = element.OuterHTML().Split('>')[0] + ">";
+        _sb.AppendLine($"{Indent}{tag}");
         _depth++;
         foreach (var child in element.Children)
             child.Accept(this);
@@ -28,7 +28,6 @@ public sealed class PrettyPrintVisitor : INodeVisitor
     public override string ToString() => _sb.ToString();
 }
 
-// Visitor: count nodes by type
 public sealed class NodeCountVisitor : INodeVisitor
 {
     public int Elements { get; private set; }
@@ -43,6 +42,6 @@ public sealed class NodeCountVisitor : INodeVisitor
             child.Accept(this);
     }
 
-    public void Visit(LightTextNode text)    => Texts++;
-    public void Visit(LightImageNode image)  => Images++;
+    public void Visit(LightTextNode text)   => Texts++;
+    public void Visit(LightImageNode image) => Images++;
 }
