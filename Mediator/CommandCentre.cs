@@ -1,57 +1,64 @@
-using System;
-using System.Collections.Generic;
-
-public class CommandCentre
+namespace DesignPatterns.Mediator
 {
-    private readonly List<Runway> _runways = new();
-
-    public void RegisterRunway(Runway r) => _runways.Add(r);
-
-    public bool RequestLanding(Aircraft a)
+    public class CommandCentre : ICommandCentre
     {
-        var free = _runways.Find(r => !r.IsOccupied);
-        if (free != null)
+        private List<Runway> _runways = new List<Runway>();
+        private List<Aircraft> _aircrafts = new List<Aircraft>();
+        
+        private Dictionary<Aircraft, Runway> _aircraftRunwayMap = new Dictionary<Aircraft, Runway>();
+
+        public CommandCentre(Runway[] runways, Aircraft[] aircrafts)
         {
-            free.Occupy();
-            Console.WriteLine($"{a.Name} cleared to land on {free.Name}.");
-            return true;
+            foreach (var r in runways) RegisterRunway(r);
+            foreach (var a in aircrafts) RegisterAircraft(a);
         }
 
-        Console.WriteLine($"{a.Name} hold position — no free runway.");
-        return false;
+        public void RegisterRunway(Runway runway)
+        {
+            _runways.Add(runway);
+            runway.SetCommandCentre(this);
+        }
+
+        public void RegisterAircraft(Aircraft aircraft)
+        {
+            _aircrafts.Add(aircraft);
+            aircraft.SetCommandCentre(this);
+        }
+
+        public void RequestLanding(Aircraft aircraft)
+        {
+            Console.WriteLine($"Командний центр: Aircraft {aircraft.Name} запитує дозвіл на посадку.");
+            
+            var freeRunway = _runways.FirstOrDefault(r => !r.IsBusy);
+
+            if (freeRunway != null)
+            {
+                freeRunway.IsBusy = true;
+                _aircraftRunwayMap[aircraft] = freeRunway; 
+                Console.WriteLine($"Командний центр: Дозвіл надано. Aircraft {aircraft.Name} сідає на Runway {freeRunway.Id}.");
+                freeRunway.HighLightRed();
+            }
+            else
+            {
+                Console.WriteLine($"Командний центр: У посадці відмовлено. Немає вільних смуг для {aircraft.Name}.");
+            }
+        }
+
+        public void RequestTakeOff(Aircraft aircraft)
+        {
+            Console.WriteLine($"Командний центр: Aircraft {aircraft.Name} запитує дозвіл на зліт.");
+            
+            if (_aircraftRunwayMap.TryGetValue(aircraft, out Runway? runway))
+            {
+                runway.IsBusy = false;
+                _aircraftRunwayMap.Remove(aircraft);
+                Console.WriteLine($"Командний центр: Aircraft {aircraft.Name} злетів зі смуги {runway.Id}.");
+                runway.HighLightGreen();
+            }
+            else
+            {
+                Console.WriteLine($"Командний центр: Помилка. Aircraft {aircraft.Name} зараз не знаходиться на злітній смузі.");
+            }
+        }
     }
-
-    public void RunwayFreed(Runway r)
-    {
-        Console.WriteLine($"Runway {r.Name} is free now.");
-    }
-}
-
-public class Aircraft
-{
-    private readonly CommandCentre _centre;
-    public string Name { get; }
-
-    public Aircraft(string name, CommandCentre centre)
-    {
-        Name = name;
-        _centre = centre;
-    }
-
-    public void RequestLanding() => _centre.RequestLanding(this);
-}
-
-public class Runway
-{
-    public string Name { get; }
-    public bool IsOccupied { get; private set; }
-
-    public Runway(string name, CommandCentre centre)
-    {
-        Name = name;
-        centre.RegisterRunway(this);
-    }
-
-    public void Occupy() => IsOccupied = true;
-    public void Free() => IsOccupied = false;
 }

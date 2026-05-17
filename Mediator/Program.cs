@@ -1,18 +1,34 @@
-using System;
+using DesignPatterns.Mediator;
 
-var centre = new CommandCentre();
-var r1 = new Runway("Runway-1", centre);
-var r2 = new Runway("Runway-2", centre);
+class Program
+{
+    static void Main(string[] args)
+    {
+        Runway runway1 = new Runway();
+        Runway runway2 = new Runway();
 
-var a1 = new Aircraft("AC-101", centre);
-var a2 = new Aircraft("AC-202", centre);
+        Aircraft aircraft1 = new Aircraft("Boeing 737", 100);
+        Aircraft aircraft2 = new Aircraft("Airbus A320", 90);
+        Aircraft aircraft3 = new Aircraft("Cessna 172", 10);
 
-Console.WriteLine("Mediator demo (CommandCentre)");
-a1.RequestLanding();
-a2.RequestLanding();
+        CommandCentre commandCentre = new CommandCentre(
+            new[] { runway1, runway2 },
+            new[] { aircraft1, aircraft2, aircraft3 }
+        );
 
-// Free runway and try again
-r1.Free();
-centre.RunwayFreed(r1);
-Console.WriteLine("Now another request:");
-a2.RequestLanding();
+        Console.WriteLine("=== ТЕСТ ПОСАДКИ ===");
+        aircraft1.Land();
+        Console.WriteLine(new string('-', 30));
+        
+        aircraft2.Land(); 
+        Console.WriteLine(new string('-', 30));
+        
+        aircraft3.Land(); 
+
+        Console.WriteLine("\n=== ТЕСТ ЗЛЬОТУ ===");
+        aircraft1.TakeOff(); 
+        
+        Console.WriteLine("\n=== ПОВТОРНА СПРОБА ПОСАДКИ ===");
+        aircraft3.Land(); 
+    }
+}   
