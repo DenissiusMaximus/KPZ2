@@ -5,33 +5,26 @@ namespace LightHTML.Core;
 
 public class LightElementNode : LightNode, IEnumerable<LightNode>
 {
-    // ── Intrinsic state ──────────────────────────────────────────────────────
-
     private readonly ElementFlyweight? _flyweight;
     private readonly string? _tagName;
     private readonly DisplayType? _display;
     private readonly ClosingType? _closing;
     private readonly IReadOnlyList<string>? _classes;
 
-    protected string TagName      => _flyweight?.TagName  ?? _tagName  ?? string.Empty;
-    private DisplayType Display   => _flyweight?.Display  ?? _display  ?? DisplayType.Block;
-    private ClosingType Closing   => _flyweight?.Closing  ?? _closing  ?? ClosingType.Closed;
+    protected string TagName    => _flyweight?.TagName ?? _tagName  ?? string.Empty;
+    private DisplayType Display => _flyweight?.Display ?? _display  ?? DisplayType.Block;
+    private ClosingType Closing => _flyweight?.Closing ?? _closing  ?? ClosingType.Closed;
     private IEnumerable<string> Classes =>
         (_flyweight?.Classes ?? _classes) ?? Enumerable.Empty<string>();
-
-    // ── Extrinsic state ──────────────────────────────────────────────────────
 
     public List<LightNode> Children { get; } = [];
     public Dictionary<string, string> Style      { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    // State pattern hook (optional — defaults to NormalState)
     public IElementState State { get; set; } = NormalState.Instance;
 
     private readonly Dictionary<string, List<EventListener>> _listeners =
         new(StringComparer.OrdinalIgnoreCase);
-
-    // ── Constructors ─────────────────────────────────────────────────────────
 
     public LightElementNode(
         string tagName,
@@ -51,8 +44,6 @@ public class LightElementNode : LightNode, IEnumerable<LightNode>
         _flyweight = flyweight ?? throw new ArgumentNullException(nameof(flyweight));
     }
 
-    // ── HTML Rendering ───────────────────────────────────────────────────────
-
     public override string InnerHTML()
     {
         if (Children.Count == 0) return string.Empty;
@@ -69,8 +60,6 @@ public class LightElementNode : LightNode, IEnumerable<LightNode>
             ? $"<{TagName}{attrs} />"
             : $"<{TagName}{attrs}>{InnerHTML()}</{TagName}>";
     }
-
-    // ── Fluent Builder ───────────────────────────────────────────────────────
 
     public LightElementNode Append(LightNode child)
     {
@@ -91,8 +80,6 @@ public class LightElementNode : LightNode, IEnumerable<LightNode>
         Attributes[name] = value;
         return this;
     }
-
-    // ── Observer ─────────────────────────────────────────────────────────────
 
     public override void AddEventListener(string eventName, EventListener listener)
     {
@@ -116,18 +103,11 @@ public class LightElementNode : LightNode, IEnumerable<LightNode>
             handler(this, payload);
     }
 
-    // ── Iterator (IEnumerable = DFS by default) ───────────────────────────────
-
     public IEnumerator<LightNode> GetEnumerator() => DomIterator.DepthFirst(this).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
     public IEnumerable<LightNode> BreadthFirst() => DomIterator.BreadthFirst(this);
 
-    // ── Visitor ──────────────────────────────────────────────────────────────
-
     public override void Accept(INodeVisitor visitor) => visitor.Visit(this);
-
-    // ── Private Helpers ──────────────────────────────────────────────────────
 
     private string BuildClassAttribute()
     {
