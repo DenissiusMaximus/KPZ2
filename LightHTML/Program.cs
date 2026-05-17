@@ -1,6 +1,8 @@
 using LightHTML.Core;
 
-var lines = new[]
+// ── Helpers 
+
+static LightElementNode ClassifyLine(string line, int index, FlyweightFactory factory, bool useFlyweight)
 {
     "My Book Title",
     "Short",
