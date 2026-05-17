@@ -1,64 +1,109 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections;
+using System.Text;
 
-public enum DisplayType { Block, Inline }
-public enum ClosingType { Single, Closed }
+namespace LightHTML.Core;
 
-public class LightElementNode : LightNode
+public class LightElementNode : LightNode, IEnumerable<LightNode>
 {
+    // ── Intrinsic state ──────────────────────────────────────────────────────
+
+    private readonly ElementFlyweight? _flyweight;
     private readonly string? _tagName;
     private readonly DisplayType? _display;
     private readonly ClosingType? _closing;
-    private readonly List<string>? _classes;
+    private readonly IReadOnlyList<string>? _classes;
 
-    private readonly ElementFlyweight? _fly;
+    protected string TagName      => _flyweight?.TagName  ?? _tagName  ?? string.Empty;
+    private DisplayType Display   => _flyweight?.Display  ?? _display  ?? DisplayType.Block;
+    private ClosingType Closing   => _flyweight?.Closing  ?? _closing  ?? ClosingType.Closed;
+    private IEnumerable<string> Classes =>
+        (_flyweight?.Classes ?? _classes) ?? Enumerable.Empty<string>();
 
-    public List<LightNode> Children { get; } = new();
-    private readonly Dictionary<string, List<Action<LightElementNode, string>>> _listeners = new();
+    // ── Extrinsic state ──────────────────────────────────────────────────────
 
-    public LightElementNode(string tagName, DisplayType display, ClosingType closing, IEnumerable<string> classes = null)
+    public List<LightNode> Children { get; } = [];
+    public Dictionary<string, string> Style      { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    // State pattern hook (optional — defaults to NormalState)
+    public IElementState State { get; set; } = NormalState.Instance;
+
+    private readonly Dictionary<string, List<EventListener>> _listeners =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    // ── Constructors ─────────────────────────────────────────────────────────
+
+    public LightElementNode(
+        string tagName,
+        DisplayType display = DisplayType.Block,
+        ClosingType closing = ClosingType.Closed,
+        IEnumerable<string>? classes = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
         _tagName = tagName;
         _display = display;
         _closing = closing;
-        _classes = classes != null ? new List<string>(classes) : new List<string>();
+        _classes = classes?.ToArray() ?? [];
     }
 
-    public LightElementNode(ElementFlyweight fly)
+    public LightElementNode(ElementFlyweight flyweight)
     {
-        _fly = fly ?? throw new ArgumentNullException(nameof(fly));
+        _flyweight = flyweight ?? throw new ArgumentNullException(nameof(flyweight));
     }
 
-    private string TagName => _fly?.TagName ?? _tagName ?? string.Empty;
-    private DisplayType Display => _fly?.Display ?? _display.GetValueOrDefault();
-    private ClosingType Closing => _fly?.Closing ?? _closing.GetValueOrDefault();
-    private IEnumerable<string> Classes => _fly?.Classes ?? (IEnumerable<string>? )_classes ?? Enumerable.Empty<string>();
+    // ── HTML Rendering ───────────────────────────────────────────────────────
 
-    public override string InnerHTML() => string.Concat(Children.Select(c => c.OuterHTML()));
+    public override string InnerHTML()
+    {
+        if (Children.Count == 0) return string.Empty;
+        var sb = new StringBuilder(Children.Count * 32);
+        foreach (var child in Children)
+            sb.Append(child.OuterHTML());
+        return sb.ToString();
+    }
 
     public override string OuterHTML()
     {
-        var classes = Classes != null && Classes.Any() ? $" class=\"{string.Join(' ', Classes)}\"" : string.Empty;
-
-        if (Closing == ClosingType.Single)
-            return $"<{TagName}{classes} />";
-
-        return $"<{TagName}{classes}>{InnerHTML()}</{TagName}>";
+        var attrs = BuildClassAttribute() + BuildStyleAttribute() + BuildExtraAttributes();
+        return Closing == ClosingType.SelfClosing
+            ? $"<{TagName}{attrs} />"
+            : $"<{TagName}{attrs}>{InnerHTML()}</{TagName}>";
     }
 
-    public override void AddEventListener(string eventName, Action<LightElementNode, string> listener)
-    {
-        if (!_listeners.TryGetValue(eventName, out var list))
-        {
-            list = new List<Action<LightElementNode, string>>();
-            _listeners[eventName] = list;
-        }
+    // ── Fluent Builder ───────────────────────────────────────────────────────
 
+    public LightElementNode Append(LightNode child)
+    {
+        Children.Add(child ?? throw new ArgumentNullException(nameof(child)));
+        return this;
+    }
+
+    public LightElementNode AppendText(string text) => Append(new LightTextNode(text));
+
+    public LightElementNode WithStyle(string property, string value)
+    {
+        Style[property] = value;
+        return this;
+    }
+
+    public LightElementNode WithAttribute(string name, string value)
+    {
+        Attributes[name] = value;
+        return this;
+    }
+
+    // ── Observer ─────────────────────────────────────────────────────────────
+
+    public override void AddEventListener(string eventName, EventListener listener)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
+        ArgumentNullException.ThrowIfNull(listener);
+        if (!_listeners.TryGetValue(eventName, out var list))
+            _listeners[eventName] = list = [];
         list.Add(listener);
     }
 
-    public override void RemoveEventListener(string eventName, Action<LightElementNode, string> listener)
+    public override void RemoveEventListener(string eventName, EventListener listener)
     {
         if (_listeners.TryGetValue(eventName, out var list))
             list.Remove(listener);
@@ -66,8 +111,45 @@ public class LightElementNode : LightNode
 
     public override void DispatchEvent(string eventName, string payload = "")
     {
-        if (!_listeners.TryGetValue(eventName, out var list)) return;
-        foreach (var l in list)
-            l(this, payload);
+        if (!_listeners.TryGetValue(eventName, out var list) || list.Count == 0) return;
+        foreach (var handler in list.ToArray())
+            handler(this, payload);
+    }
+
+    // ── Iterator (IEnumerable = DFS by default) ───────────────────────────────
+
+    public IEnumerator<LightNode> GetEnumerator() => DomIterator.DepthFirst(this).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public IEnumerable<LightNode> BreadthFirst() => DomIterator.BreadthFirst(this);
+
+    // ── Visitor ──────────────────────────────────────────────────────────────
+
+    public override void Accept(INodeVisitor visitor) => visitor.Visit(this);
+
+    // ── Private Helpers ──────────────────────────────────────────────────────
+
+    private string BuildClassAttribute()
+    {
+        var all = Classes
+            .Concat(State.AdditionalClasses)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .ToArray();
+        return all.Length > 0 ? $" class=\"{string.Join(' ', all)}\"" : string.Empty;
+    }
+
+    private string BuildStyleAttribute()
+    {
+        if (Style.Count == 0) return string.Empty;
+        return $" style=\"{string.Join(';', Style.Select(kv => $"{kv.Key}:{kv.Value}"))}\"";
+    }
+
+    private string BuildExtraAttributes()
+    {
+        var all = Attributes
+            .Concat(State.AdditionalAttributes)
+            .Select(kv => string.IsNullOrEmpty(kv.Value) ? kv.Key : $"{kv.Key}=\"{kv.Value}\"");
+        var result = string.Join(' ', all);
+        return result.Length > 0 ? " " + result : string.Empty;
     }
 }
