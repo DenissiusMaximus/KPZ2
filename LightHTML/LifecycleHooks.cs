@@ -12,7 +12,6 @@ public abstract class LifecycleElementNode : LightElementNode
         OnCreated();
     }
 
-    // Template method — defines the render skeleton
     public sealed override string OuterHTML()
     {
         OnBeforeRender();
@@ -21,7 +20,6 @@ public abstract class LifecycleElementNode : LightElementNode
         return html;
     }
 
-    // Lifecycle hooks — override in subclasses
     protected virtual void OnCreated()          { }
     protected virtual void OnBeforeRender()     { }
     protected virtual void OnAfterRender(string html) { }
