@@ -20,9 +20,9 @@ public abstract class LifecycleElementNode : LightElementNode
         return html;
     }
 
-    protected virtual void OnCreated()          { }
-    protected virtual void OnBeforeRender()     { }
+    protected virtual void OnCreated() { }
+    protected virtual void OnBeforeRender() { }
     protected virtual void OnAfterRender(string html) { }
-    public    virtual void OnInserted()         { }
-    public    virtual void OnRemoved()          { }
+    public virtual void OnInserted() { }
+    public virtual void OnRemoved() { }
 }
